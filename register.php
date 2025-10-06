@@ -1,13 +1,5 @@
 <?php
-$host = "localhost";
-$user = "root";
-$pass = "";
-$dbname = "user_management";
-
-$conn = new mysqli($host, $user, $pass, $dbname);
-if ($conn->connect_error) {
-    die("<div class='alert alert-danger'>Database connection failed: " . $conn->connect_error . "</div>");
-}
+include 'conn.php'; // Uses PDO connection
 
 // Get form data
 $username = $_POST['username'];
@@ -15,30 +7,34 @@ $email = $_POST['email'];
 $password = $_POST['password'];
 $role = $_POST['role'];
 
+try {
+    // Check if email already exists
+    $check = $conn->prepare("SELECT * FROM users WHERE email = :email");
+    $check->bindParam(':email', $email, PDO::PARAM_STR);
+    $check->execute();
 
-// Check if email already exists
-$check = $conn->prepare("SELECT * FROM users WHERE email = ?");
-$check->bind_param("s", $email);
-$check->execute();
-$result = $check->get_result();
+    if ($check->rowCount() > 0) {
+        echo "<div class='alert alert-warning'>Email already registered!</div>";
+        exit;
+    }
 
-if ($result->num_rows > 0) {
-    echo "<div class='alert alert-warning'>Email already registered!</div>";
-    exit;
+    // Hash password before saving
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+    // Insert new user into database
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (:username, :email, :password, :role)");
+    $stmt->bindParam(':username', $username, PDO::PARAM_STR);
+    $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+    $stmt->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
+    $stmt->bindParam(':role', $role, PDO::PARAM_STR);
+
+    if ($stmt->execute()) {
+        echo "<div class='alert alert-success'>Registration successful!</div>";
+    } else {
+        echo "<div class='alert alert-danger'>Something went wrong while registering!</div>";
+    }
+
+} catch (PDOException $e) {
+    echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
 }
-
-// Hash password before saving
-$hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-// Insert into database
-$stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
-$stmt->bind_param("ssss", $username, $email, $hashedPassword, $role);
-
-if ($stmt->execute()) {
-    echo "<div class='alert alert-success'>Registration successful!</div>";
-} else {
-    echo "<div class='alert alert-danger'>Error: " . $conn->error . "</div>";
-}
-
-$conn->close();
 ?>

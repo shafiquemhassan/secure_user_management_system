@@ -5,15 +5,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$dbname = "user_management";
-
-$conn = new mysqli($host, $user, $pass, $dbname);
-if ($conn->connect_error) {
-    die("<div class='alert alert-danger'>Database connection failed: " . $conn->connect_error . "</div>");
-}
+include 'conn.php'; // Uses PDO connection
 
 $user_id = $_POST['user_id'];
 $fullname = $_POST['fullname'];
@@ -24,7 +16,7 @@ $address = $_POST['address'];
 
 $target = "uploads/";
 if (!is_dir($target)) {
-    mkdir($target);
+    mkdir($target, 0777, true);
 }
 
 $profile_pic = "";
@@ -33,20 +25,44 @@ if (!empty($_FILES['profile_pic']['name'])) {
     $target_file = $target . $filename;
 
     if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $target_file)) {
-        $profile_pic = $filename; // ✅ store only the filename in DB
+        $profile_pic = $filename; // store only filename in DB
     }
 }
 
-$sql = "UPDATE users SET fullname=?, father_name=?, cnic=?, phone=?, address=?, picture=? WHERE id=?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("ssssssi", $fullname, $father_name, $cnic, $phone, $address, $profile_pic, $user_id);
+try {
+    // If profile picture is uploaded, include it in update
+    if (!empty($profile_pic)) {
+        $sql = "UPDATE users 
+                SET fullname = :fullname, father_name = :father_name, cnic = :cnic, 
+                    phone = :phone, address = :address, picture = :picture 
+                WHERE id = :id";
+    } else {
+        // If no new picture, don't overwrite existing picture
+        $sql = "UPDATE users 
+                SET fullname = :fullname, father_name = :father_name, cnic = :cnic, 
+                    phone = :phone, address = :address 
+                WHERE id = :id";
+    }
 
-if ($stmt->execute()) {
-    echo "<div class='alert alert-success'>Profile updated successfully!</div>";
-} else {
-    echo "<div class='alert alert-danger'>Error updating profile.</div>";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':fullname', $fullname, PDO::PARAM_STR);
+    $stmt->bindParam(':father_name', $father_name, PDO::PARAM_STR);
+    $stmt->bindParam(':cnic', $cnic, PDO::PARAM_STR);
+    $stmt->bindParam(':phone', $phone, PDO::PARAM_STR);
+    $stmt->bindParam(':address', $address, PDO::PARAM_STR);
+    $stmt->bindParam(':id', $user_id, PDO::PARAM_INT);
+
+    if (!empty($profile_pic)) {
+        $stmt->bindParam(':picture', $profile_pic, PDO::PARAM_STR);
+    }
+
+    if ($stmt->execute()) {
+        echo "<div class='alert alert-success'>Profile updated successfully!</div>";
+    } else {
+        echo "<div class='alert alert-danger'>Error updating profile.</div>";
+    }
+
+} catch (PDOException $e) {
+    echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
 }
-
-$stmt->close();
-$conn->close();
 ?>

@@ -7,15 +7,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = $_POST['phone'];
     $address = $_POST['address'];
 
-    $conn = new mysqli("localhost", "root", "", "user_management");
-    if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+    include 'conn.php'; // Uses PDO connection
 
-    $stmt = $conn->prepare("UPDATE users SET fullname=?, father_name=?, cnic=?, phone=?, address=? WHERE id=?");
-    $stmt->bind_param("sssssi", $fullname, $father_name, $cnic, $phone, $address, $id);
-    $stmt->execute();
+    try {
+        // Prepare and execute the update query
+        $stmt = $conn->prepare("
+            UPDATE users 
+            SET fullname = :fullname, 
+                father_name = :father_name, 
+                cnic = :cnic, 
+                phone = :phone, 
+                address = :address 
+            WHERE id = :id
+        ");
 
-    header("Location: mange_users.php?msg=updated");
-    $stmt->close();
-    $conn->close();
+        // Bind parameters securely
+        $stmt->bindParam(':fullname', $fullname, PDO::PARAM_STR);
+        $stmt->bindParam(':father_name', $father_name, PDO::PARAM_STR);
+        $stmt->bindParam(':cnic', $cnic, PDO::PARAM_STR);
+        $stmt->bindParam(':phone', $phone, PDO::PARAM_STR);
+        $stmt->bindParam(':address', $address, PDO::PARAM_STR);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        // Redirect after successful update
+        header("Location: mange_users.php?msg=updated");
+        exit();
+
+    } catch (PDOException $e) {
+        echo "<div class='alert alert-danger'>Error updating user: " . htmlspecialchars($e->getMessage()) . "</div>";
+    }
 }
 ?>

@@ -1,43 +1,40 @@
 <?php
 session_start();
-
-$host = "localhost";
-$user = "root";
-$pass = "";
-$dbname = "user_management";
-
-$conn = new mysqli($host, $user, $pass, $dbname);
-if ($conn->connect_error) {
-    die("<div class='alert alert-danger'>Database connection failed: " . $conn->connect_error . "</div>");
-}
+include 'conn.php'; // Uses PDO connection
 
 $email = $_POST['email'];
 $password = $_POST['password'];
 
-$stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-$stmt->bind_param("s", $email);
-$stmt->execute();
-$result = $stmt->get_result();
+try {
+    // Prepare SQL statement using PDO
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
+    $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+    $stmt->execute();
 
-if ($result->num_rows === 1) {
-    $user = $result->fetch_assoc();
+    // Fetch user record
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
+    if ($user) {
+        // Verify hashed password
+        if (password_verify($password, $user['password'])) {
+            // Store user info in session
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
 
-        if ($user['role'] === 'admin') {
-            echo "success|admin_dashboard.php"; 
+            // Redirect or send success response
+            if ($user['role'] === 'admin') {
+                echo "success|admin_dashboard.php";
+            } else {
+                echo "success|user_dashboard.php";
+            }
         } else {
-            echo "success|user_dashboard.php";
+            echo "<div class='alert alert-danger'>Invalid password.</div>";
         }
     } else {
-        echo "<div class='alert alert-danger'>Invalid password.</div>";
+        echo "<div class='alert alert-danger'>No account found with this email.</div>";
     }
-} else {
-    echo "<div class='alert alert-danger'>No account found with this email.</div>";
+} catch (PDOException $e) {
+    echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
 }
-
-$conn->close();
 ?>

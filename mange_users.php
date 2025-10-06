@@ -56,15 +56,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     .collapsed + .main-content {
       margin-left: 70px;
     }
-    .toggle-btn {
-      position: fixed;
-      top: 15px;
-      left: 15px;
-      font-size: 22px;
-      color: #2563eb;
-      cursor: pointer;
-      z-index: 1000;
-    }
     table img {
       width: 50px;
       height: 50px;
@@ -83,22 +74,22 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     <a href="logout.php"><i class="fa-solid fa-right-from-bracket"></i>Logout</a>
   </div>
 
- 
-
   <!-- Main Content -->
   <div class="main-content" id="mainContent">
     <div class="container-fluid">
       <h2 class="fw-bold mb-4">Users Details</h2>
 
       <?php
-      // Database Connection
-      $conn = new mysqli("localhost", "root", "", "user_management");
-      if ($conn->connect_error) {
-          die("<div class='alert alert-danger'>Database connection failed: " . $conn->connect_error . "</div>");
-      }
+      include 'conn.php'; // Uses PDO
 
-      $sql = "SELECT id, fullname, father_name, cnic, phone, address, picture FROM users WHERE role='user'";
-      $result = $conn->query($sql);
+      try {
+          $stmt = $conn->prepare("SELECT id, fullname, father_name, cnic, phone, address, picture FROM users WHERE role = 'user'");
+          $stmt->execute();
+          $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+      } catch (PDOException $e) {
+          echo "<div class='alert alert-danger'>Error fetching users: " . htmlspecialchars($e->getMessage()) . "</div>";
+          $users = [];
+      }
       ?>
 
       <div class="table-responsive shadow-sm">
@@ -116,43 +107,45 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
             </tr>
           </thead>
           <tbody>
-          <?php
-          if ($result && $result->num_rows > 0) {
-              $i = 1;
-              while ($row = $result->fetch_assoc()) {
-                  echo "
+          <?php if (count($users) > 0): ?>
+              <?php $i = 1; foreach ($users as $row): ?>
                   <tr>
-                    <th scope='row'>{$i}</th>
-                    <td><img src='uploads/{$row['picture']}' alt='Profile'></td>
-                    <td>{$row['fullname']}</td>
-                    <td>{$row['father_name']}</td>
-                    <td>{$row['cnic']}</td>
-                    <td>{$row['phone']}</td>
-                    <td>{$row['address']}</td>
+                    <th scope="row"><?= $i++; ?></th>
                     <td>
-                      <button class='btn btn-sm btn-primary editBtn'
-                              data-id='{$row['id']}'
-                              data-name='{$row['fullname']}'
-                              data-father='{$row['father_name']}'
-                              data-cnic='{$row['cnic']}'
-                              data-phone='{$row['phone']}'
-                              data-address='{$row['address']}'
-                              data-bs-toggle='modal'
-                              data-bs-target='#editModal'>
-                        <i class='fa-solid fa-pen'></i> Edit
+                      <?php if (!empty($row['picture']) && file_exists("uploads/{$row['picture']}")): ?>
+                        <img src="uploads/<?= htmlspecialchars($row['picture']); ?>" alt="Profile">
+                      <?php else: ?>
+                        <img src="https://via.placeholder.com/50" alt="No Image">
+                      <?php endif; ?>
+                    </td>
+                    <td><?= htmlspecialchars($row['fullname']); ?></td>
+                    <td><?= htmlspecialchars($row['father_name']); ?></td>
+                    <td><?= htmlspecialchars($row['cnic']); ?></td>
+                    <td><?= htmlspecialchars($row['phone']); ?></td>
+                    <td><?= htmlspecialchars($row['address']); ?></td>
+                    <td>
+                      <button class="btn btn-sm btn-primary editBtn"
+                              data-id="<?= $row['id']; ?>"
+                              data-name="<?= htmlspecialchars($row['fullname']); ?>"
+                              data-father="<?= htmlspecialchars($row['father_name']); ?>"
+                              data-cnic="<?= htmlspecialchars($row['cnic']); ?>"
+                              data-phone="<?= htmlspecialchars($row['phone']); ?>"
+                              data-address="<?= htmlspecialchars($row['address']); ?>"
+                              data-bs-toggle="modal"
+                              data-bs-target="#editModal">
+                        <i class="fa-solid fa-pen"></i> Edit
                       </button>
-                      <a href='delete_user.php?id={$row['id']}' class='btn btn-sm btn-danger' onclick=\"return confirm('Are you sure?');\">
-                        <i class='fa-solid fa-trash'></i> Del
+                      <a href="delete_user.php?id=<?= $row['id']; ?>" 
+                         class="btn btn-sm btn-danger" 
+                         onclick="return confirm('Are you sure you want to delete this user?');">
+                        <i class="fa-solid fa-trash"></i> Del
                       </a>
                     </td>
-                  </tr>";
-                  $i++;
-              }
-          } else {
-              echo "<tr><td colspan='8' class='text-center text-muted'>No users found.</td></tr>";
-          }
-          $conn->close();
-          ?>
+                  </tr>
+              <?php endforeach; ?>
+          <?php else: ?>
+              <tr><td colspan="8" class="text-center text-muted">No users found.</td></tr>
+          <?php endif; ?>
           </tbody>
         </table>
       </div>
@@ -203,9 +196,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-   
-
-    // Fill modal data
+    // Fill modal data when Edit button is clicked
     document.querySelectorAll('.editBtn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.getElementById('edit-id').value = btn.dataset.id;

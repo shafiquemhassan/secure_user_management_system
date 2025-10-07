@@ -1,17 +1,17 @@
 <?php
 session_start();
-include 'conn.php'; // Uses PDO connection
+include 'conn.php';
 
 $email = $_POST['email'];
 $password = $_POST['password'];
 
 try {
-    // Prepare SQL statement using PDO
+    
     $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
     $stmt->bindParam(':email', $email, PDO::PARAM_STR);
     $stmt->execute();
 
-    // Fetch user record
+    
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user) {

@@ -94,25 +94,92 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
       <div class="card-stats">
         <div class="card text-white bg-primary shadow-sm p-3">
           <h5>Total Registered Users</h5>
-          <h3>2</h3>
+<?php
+include 'conn.php';
+
+try {
+    // Count total users with role = 'user'
+    $stmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE role = 'user'");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    echo "<h3>" . $row['total'] . "</h3>";
+} catch (PDOException $e) {
+    echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
+}
+?>
           <a href="#" class="text-white text-decoration-underline">View Details</a>
         </div>
 
         <div class="card text-dark bg-warning shadow-sm p-3">
           <h5>Yesterday Registered Users</h5>
-          <h3>0</h3>
+          <?php
+include 'conn.php';
+
+try {
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) AS total 
+        FROM users 
+        WHERE role = 'user' 
+        AND DATE(created_at) = CURDATE() - INTERVAL 1 DAY
+    ");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    echo "<h3>" . $row['total'] . "</h3>";
+} catch (PDOException $e) {
+    echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
+}
+?>
+
           <a href="#" class="text-dark text-decoration-underline">View Details</a>
         </div>
 
         <div class="card text-white bg-success shadow-sm p-3">
           <h5>Registered in Last 7 Days</h5>
-          <h3>0</h3>
+          <?php
+include 'conn.php';
+
+try {
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) AS total 
+        FROM users 
+        WHERE role = 'user' 
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    ");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    echo "<h3>" . $row['total'] . "</h3>";
+} catch (PDOException $e) {
+    echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
+}
+?>
+
           <a href="#" class="text-white text-decoration-underline">View Details</a>
         </div>
 
         <div class="card text-white bg-danger shadow-sm p-3">
           <h5>Registered in Last 30 Days</h5>
-          <h3>0</h3>
+          <?php
+include 'conn.php';
+
+try {
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) AS total 
+        FROM users 
+        WHERE role = 'user' 
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    echo "<h3>" . $row['total'] . "</h3>";
+} catch (PDOException $e) {
+    echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
+}
+?>
+
           <a href="#" class="text-white text-decoration-underline">View Details</a>
         </div>
       </div>

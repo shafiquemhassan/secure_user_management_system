@@ -5,9 +5,9 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-include 'conn.php'; // Uses PDO connection
+include 'conn.php'; // PDO connection
 
-$user_id = $_POST['user_id'];
+$user_id = $_SESSION['user_id']; // ✅ Get ID from session
 $fullname = $_POST['fullname'];
 $father_name = $_POST['father_name'];
 $cnic = $_POST['cnic'];
@@ -20,24 +20,22 @@ if (!is_dir($target)) {
 }
 
 $profile_pic = "";
-if (!empty($_FILES['profile_pic']['name'])) {
-    $filename = basename($_FILES['profile_pic']['name']);
+if (!empty($_FILES['picture']['name'])) { // ✅ Use the same name as in your form
+    $filename = time() . "_" . basename($_FILES['picture']['name']);
     $target_file = $target . $filename;
 
-    if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $target_file)) {
-        $profile_pic = $filename; // store only filename in DB
+    if (move_uploaded_file($_FILES['picture']['tmp_name'], $target_file)) {
+        $profile_pic = $filename;
     }
 }
 
 try {
-    // If profile picture is uploaded, include it in update
     if (!empty($profile_pic)) {
         $sql = "UPDATE users 
                 SET fullname = :fullname, father_name = :father_name, cnic = :cnic, 
                     phone = :phone, address = :address, picture = :picture 
                 WHERE id = :id";
     } else {
-        // If no new picture, don't overwrite existing picture
         $sql = "UPDATE users 
                 SET fullname = :fullname, father_name = :father_name, cnic = :cnic, 
                     phone = :phone, address = :address 
@@ -45,19 +43,19 @@ try {
     }
 
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':fullname', $fullname, PDO::PARAM_STR);
-    $stmt->bindParam(':father_name', $father_name, PDO::PARAM_STR);
-    $stmt->bindParam(':cnic', $cnic, PDO::PARAM_STR);
-    $stmt->bindParam(':phone', $phone, PDO::PARAM_STR);
-    $stmt->bindParam(':address', $address, PDO::PARAM_STR);
-    $stmt->bindParam(':id', $user_id, PDO::PARAM_INT);
+    $stmt->bindParam(':fullname', $fullname);
+    $stmt->bindParam(':father_name', $father_name);
+    $stmt->bindParam(':cnic', $cnic);
+    $stmt->bindParam(':phone', $phone);
+    $stmt->bindParam(':address', $address);
+    $stmt->bindParam(':id', $user_id);
 
     if (!empty($profile_pic)) {
-        $stmt->bindParam(':picture', $profile_pic, PDO::PARAM_STR);
+        $stmt->bindParam(':picture', $profile_pic);
     }
 
     if ($stmt->execute()) {
-        echo "<div class='alert alert-success'>Profile updated successfully!</div>";
+         header("Location: user_dashboard.php?updated=success");
     } else {
         echo "<div class='alert alert-danger'>Error updating profile.</div>";
     }

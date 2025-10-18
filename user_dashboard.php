@@ -4,6 +4,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'user') {
     header("Location: login.html");
     exit();
 }
+
 ?>
 
 <!DOCTYPE html>
